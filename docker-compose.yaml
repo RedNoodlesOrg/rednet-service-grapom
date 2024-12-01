@@ -1,7 +1,53 @@
-name: "PLACEHOLDER"
+name: "grapom"
 services:
-
+  grafana:
+    container_name: grafana
+    hostname: grafana
+    depends_on:
+      prometheus:
+        condition: service_started
+        required: true
+    image: grafana/grafana:latest
+    networks:
+      default: null
+      cloudflared-network: null
+    ports:
+      - mode: ingress
+        target: 3000
+        published: "3000"
+        protocol: tcp
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ALLOW_EMBEDDING: true
+      GF_AUTH_ANONYMOUS_ENABLED: true
+    volumes:
+      - type: volume
+        source: grafana-storage
+        target: /var/lib/grafana
+        volume: {}
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:latest
+    networks:
+      default: null
+    restart: unless-stopped
+    volumes:
+      - type: volume
+        source: prometheus-data-storage
+        target: /prometheus
+      - type: volume
+        source: prometheus-config-storage
+        target: /etc/prometheus
 networks:
+  default:
+    name: grafana_default
   cloudflared-network:
     name: cloudflared-network
     external: true
+volumes:
+  grafana-storage:
+    name: grapom_grafana-storage
+  prometheus-data-storage:
+     name: grapom_prometheus-data-storage
+  prometheus-config-storage:
+     name: grapom_prometheus-config-storage
