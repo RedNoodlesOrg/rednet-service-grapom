@@ -1,4 +1,4 @@
-name: "grapom"
+name: "grapom-stack"
 services:
   grafana:
     container_name: grafana
