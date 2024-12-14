@@ -112,6 +112,7 @@ services:
     container_name: prometheus
     image: prom/prometheus:latest
     networks:
+      cloudflared-network: null
       default: null
     restart: unless-stopped
     volumes:
