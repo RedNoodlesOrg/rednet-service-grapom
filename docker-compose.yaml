@@ -1,30 +1,113 @@
-name: "grapom-stack"
+name: grapom-stack
 services:
   grafana:
     container_name: grafana
-    hostname: grafana
     depends_on:
       prometheus:
         condition: service_started
         required: true
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+    hostname: grafana
     image: grafana/grafana:latest
     networks:
-      default: null
       cloudflared-network: null
+      default: null
     ports:
       - mode: ingress
         target: 3000
         published: "3000"
         protocol: tcp
     restart: unless-stopped
-    environment:
-      GF_SECURITY_ALLOW_EMBEDDING: true
-      GF_AUTH_ANONYMOUS_ENABLED: true
     volumes:
       - type: volume
         source: grafana-storage
         target: /var/lib/grafana
         volume: {}
+  netdata:
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    container_name: netdata
+    environment:
+      NETDATA_PROMETHEUS_DATA_SOURCE: as_collected
+      NETDATA_PROMETHEUS_ENABLE: "true"
+      NETDATA_PROMETHEUS_FORMAT: prometheus
+    image: netdata/netdata
+    network_mode: host
+    pid: host
+    restart: unless-stopped
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - type: volume
+        source: netdata-config-storage
+        target: /etc/netdata
+        volume: {}
+      - type: volume
+        source: netdata-lib-storage
+        target: /var/lib/netdata
+        volume: {}
+      - type: volume
+        source: netdata-cache-storage
+        target: /var/cache/netdata
+        volume: {}
+      - type: bind
+        source: /
+        target: /host/root
+        read_only: true
+        bind:
+          propagation: rslave
+          create_host_path: true
+      - type: bind
+        source: /etc/passwd
+        target: /host/etc/passwd
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /etc/group
+        target: /host/etc/group
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /etc/localtime
+        target: /etc/localtime
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /proc
+        target: /host/proc
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /sys
+        target: /host/sys
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /etc/os-release
+        target: /host/etc/os-release
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /var/log
+        target: /host/var/log
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        read_only: true
+        bind:
+          create_host_path: true
   prometheus:
     container_name: prometheus
     image: prom/prometheus:latest
@@ -39,15 +122,21 @@ services:
         source: prometheus-config-storage
         target: /etc/prometheus
 networks:
-  default:
-    name: grafana_default
   cloudflared-network:
     name: cloudflared-network
     external: true
+  default:
+    name: grafana_default
 volumes:
   grafana-storage:
     name: grapom_grafana-storage
-  prometheus-data-storage:
-     name: grapom_prometheus-data-storage
+  netdata-cache-storage:
+    name: grapom-stack_netdata-cache-storage
+  netdata-config-storage:
+    name: grapom-stack_netdata-config-storage
+  netdata-lib-storage:
+    name: grapom-stack_netdata-lib-storage
   prometheus-config-storage:
-     name: grapom_prometheus-config-storage
+    name: grapom_prometheus-config-storage
+  prometheus-data-storage:
+    name: grapom_prometheus-data-storage
